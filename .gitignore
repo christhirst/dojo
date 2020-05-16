@@ -2,4 +2,3 @@ go/bin
 go/pkg
 java/*class
 python/*swp
-.vscode/*
