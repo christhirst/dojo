@@ -2,3 +2,4 @@ go/bin
 go/pkg
 JavaProject/*class
 python/*swp
+go/src
