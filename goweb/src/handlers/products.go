@@ -1,97 +1,57 @@
 package handlers
 
 import (
-	"data"
+	"fmt"
 	"log"
 	"net/http"
-	"regexp"
 	"strconv"
+
+	"data"
+
+	"github.com/gorilla/mux"
 )
 
+// KeyProduct is a key used for the Product object in the context
+type KeyProduct struct{}
+
+// Products handler for getting and updating products
 type Products struct {
 	l *log.Logger
+	v *data.Validation
 }
 
-func NewProducts(l *log.Logger) *Products {
-	return &Products{l}
+// NewProducts returns a new products handler with the given logger
+func NewProducts(l *log.Logger, v *data.Validation) *Products {
+	return &Products{l, v}
 }
 
-func (p *Products) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+// ErrInvalidProductPath is an error message when the product path is not valid
+var ErrInvalidProductPath = fmt.Errorf("Invalid Path, path should be /products/[id]")
 
-	if r.Method == http.MethodGet {
-		p.getProducts(rw, r)
-		return
-	}
-	if r.Method == http.MethodPost {
-		p.addProduct(rw, r)
-	}
-	if r.Method == http.MethodPut {
-		reg := regexp.MustCompile(`/([0-9]+`)
-		g := reg.FindAllStringSubmatch(r.URL.Path, -1)
-		if len(g) != 1 {
-			p.l.Println("Invalid URI more one id")
-			http.Error(rw, "Invalid URI", http.StatusBadRequest)
-
-			return
-		}
-
-		if len(g[0]) != 2 {
-			p.l.Println("Invalid URI more than one capture group")
-			http.Error(rw, "Invalid URI", http.StatusBadRequest)
-			return
-		}
-
-		idString := g[0][1]
-		id, err := strconv.Atoi(idString)
-		if err != nil {
-			p.l.Println("Invalid URI unable to convert to number", idString)
-			http.Error(rw, "Invalid URI", http.StatusBadRequest)
-			return
-		}
-		p.updateProducts(id, rw, r)
-		return
-	}
-
-	rw.WriteHeader(http.StatusMethodNotAllowed)
+// GenericError is a generic error message returned by a server
+type GenericError struct {
+	Message string `json:"message"`
 }
 
-func (p *Products) getProducts(rw http.ResponseWriter, r *http.Request) {
-	lp := data.GetProducts()
-	err := lp.ToJSON(rw)
+// ValidationError is a collection of validation error messages
+type ValidationError struct {
+	Messages []string `json:"messages"`
+}
+
+// getProductID returns the product ID from the URL
+// Panics if cannot convert the id into an integer
+// this should never happen as the router ensures that
+// this is a valid number
+func getProductID(r *http.Request) int {
+	// parse the product id from the url
+	vars := mux.Vars(r)
+
+	// convert the id into an integer and return
+	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(rw, "Unable to marshal json", http.StatusInternalServerError)
+		// should never happen
+		panic(err)
 	}
 
-}
-
-func (p *Products) addProduct(rw http.ResponseWriter, r *http.Request) {
-	prod := &data.Product{}
-	err := prod.FromJSON(r.Body)
-	if err != nil {
-		http.Error(rw, "Unable to unmarshal json", http.StatusBadRequest)
-	}
-
-	p.l.Printf("Prod: %#v", prod)
-	data.AddProduct(prod)
-}
-
-func (p Products) updateProducts(id int, rw http.ResponseWriter, r *http.Request) {
-	prod := &data.Product{}
-	err := prod.FromJSON(r.Body)
-	if err != nil {
-		http.Error(rw, "Unable to unmarshal json", http.StatusBadRequest)
-	}
-
-	data.AddProduct(prod)
-	err = data.UpdateProduct(id, prod)
-	if err != data.ErrProductNotFound {
-		http.Error(rw, "Product not found", http.StatusNotFound)
-		return
-	}
-
-	if err != nil {
-		http.Error(rw, "Product not found", http.StatusInternalServerError)
-		return
-	}
-
+	return id
 }
