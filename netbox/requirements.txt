@@ -20,6 +20,6 @@ netaddr==0.7.19
 Pillow==7.1.1
 psycopg2-binary==2.8.5
 pycryptodome==3.9.7
-PyYAML==5.3.1
+PyYAML==5.4
 redis==3.4.1
 svgwrite==1.4
